@@ -1,0 +1,40 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email_verified == true &&
+         request.auth.token.email == "bkainat419@gmail.com") ||
+        firestore.exists(/databases/ai-studio-android-panelinj-d87fca93-3bd5-402a-9676-de577f1aba55/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function hasApprovedDownloadGrant(productId, fileName) {
+      let grantPath = /databases/ai-studio-android-panelinj-d87fca93-3bd5-402a-9676-de577f1aba55/documents/products/$(productId)/grants/$(request.auth.uid);
+      return isSignedIn() &&
+             firestore.exists(grantPath) &&
+             firestore.get(grantPath).data.status == "APPROVED" &&
+             firestore.get(grantPath).data.userId == request.auth.uid &&
+             firestore.get(grantPath).data.fileName == fileName;
+    }
+
+    // Real APK binaries uploaded by verified admins under /apks/{productId}/{fileName}.
+    // Direct downloads are strictly blocked unless the user is an Admin or holds an APPROVED Firestore download grant.
+    match /apks/{productId}/{fileName} {
+      allow read: if isAdmin() || hasApprovedDownloadGrant(productId, fileName);
+      allow write: if isAdmin() &&
+                      fileName.matches('.*\\.apk$') &&
+                      request.resource.size > 0 &&
+                      request.resource.size <= 536870912;
+    }
+  }
+}

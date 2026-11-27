@@ -1,0 +1,147 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized administrator account granted access to manage APK products and verify payments.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID of the admin user." },
+        "email": { "type": "string", "description": "Verified email address of the admin user." },
+        "displayName": { "type": "string", "description": "Display name of the admin user." },
+        "grantedBy": { "type": "string", "description": "UID of the admin who granted access." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when created." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when updated." }
+      },
+      "required": ["uid", "email", "displayName", "grantedBy", "createdAt", "updatedAt"]
+    },
+    "PaymentSettings": {
+      "title": "PaymentSettings",
+      "description": "Admin-configured Easypaisa and JazzCash payment account details displayed during checkout.",
+      "type": "object",
+      "properties": {
+        "easypaisaTitle": { "type": "string", "description": "Easypaisa account holder name." },
+        "easypaisaNumber": { "type": "string", "description": "Easypaisa mobile account number." },
+        "jazzcashTitle": { "type": "string", "description": "JazzCash account holder name." },
+        "jazzcashNumber": { "type": "string", "description": "JazzCash mobile account number." },
+        "instructions": { "type": "string", "description": "Additional payment verification instructions." },
+        "updatedBy": { "type": "string", "description": "UID of the admin who last updated payment settings." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when created." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when updated." }
+      },
+      "required": ["easypaisaTitle", "easypaisaNumber", "jazzcashTitle", "jazzcashNumber", "instructions", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "ApkProduct": {
+      "title": "ApkProduct",
+      "description": "Public catalog listing for a real downloadable APK product.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "APK product title." },
+        "version": { "type": "string", "description": "APK semantic or build version string." },
+        "category": { "type": "string", "description": "Product category label." },
+        "description": { "type": "string", "description": "Detailed product description and release notes." },
+        "pricePkr": { "type": "integer", "description": "Price in PKR." },
+        "fileName": { "type": "string", "description": "Original .apk filename." },
+        "fileSizeBytes": { "type": "integer", "description": "Exact size of the uploaded .apk file in bytes." },
+        "active": { "type": "boolean", "description": "Whether the product is active and visible in the store." },
+        "ownerUid": { "type": "string", "description": "Admin UID that uploaded this APK." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when created." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when updated." }
+      },
+      "required": ["name", "version", "category", "description", "pricePkr", "fileName", "fileSizeBytes", "active", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "ProductAsset": {
+      "title": "ProductAsset",
+      "description": "Admin-only vault mapping each product to its real Firebase Storage APK object path.",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string", "description": "Matching ApkProduct document ID." },
+        "storagePath": { "type": "string", "description": "Firebase Storage path of the uploaded .apk file." },
+        "fileName": { "type": "string", "description": "Uploaded .apk filename." },
+        "fileSizeBytes": { "type": "integer", "description": "Uploaded .apk file size in bytes." },
+        "ownerUid": { "type": "string", "description": "Admin UID that uploaded the asset." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when created." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when updated." }
+      },
+      "required": ["productId", "storagePath", "fileName", "fileSizeBytes", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "ApkOrder": {
+      "title": "ApkOrder",
+      "description": "Customer APK purchase order with manual payment verification and gated download access.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated customer UID." },
+        "userEmail": { "type": "string", "description": "Authenticated customer email." },
+        "productId": { "type": "string", "description": "Ordered ApkProduct ID." },
+        "productName": { "type": "string", "description": "Snapshot of product name at order time." },
+        "productVersion": { "type": "string", "description": "Snapshot of product version at order time." },
+        "pricePkr": { "type": "integer", "description": "Order total in PKR." },
+        "customerName": { "type": "string", "description": "Customer full name." },
+        "whatsappNumber": { "type": "string", "description": "Customer WhatsApp contact number." },
+        "paymentMethod": { "type": "string", "enum": ["EASYPAISA", "JAZZCASH"], "description": "Payment channel used." },
+        "transactionId": { "type": "string", "description": "Customer-submitted payment transaction reference ID." },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"], "description": "Manual verification status." },
+        "adminNote": { "type": "string", "description": "Optional verification note from admin." },
+        "approvedStoragePath": { "type": "string", "description": "Firebase Storage path attached exclusively upon admin approval." },
+        "approvedFileName": { "type": "string", "description": "Deliverable .apk filename attached upon approval." },
+        "approvedFileSizeBytes": { "type": "integer", "description": "Deliverable .apk size attached upon approval." },
+        "reviewedBy": { "type": "string", "description": "Admin UID who reviewed the payment." },
+        "reviewedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of admin review." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when order was placed." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when order was updated." }
+      },
+      "required": [
+        "userId", "userEmail", "productId", "productName", "productVersion",
+        "pricePkr", "customerName", "whatsappNumber", "paymentMethod",
+        "transactionId", "status", "createdAt", "updatedAt"
+      ]
+    },
+    "DownloadGrant": {
+      "title": "DownloadGrant",
+      "description": "Server-verified download entitlement created atomically when an admin approves an order.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authorized buyer Firebase Auth UID." },
+        "orderId": { "type": "string", "description": "Approved ApkOrder document ID." },
+        "productId": { "type": "string", "description": "Purchased ApkProduct document ID." },
+        "storagePath": { "type": "string", "description": "Confined Firebase Storage path to the real .apk binary." },
+        "fileName": { "type": "string", "description": "Verified .apk filename." },
+        "fileSizeBytes": { "type": "integer", "description": "Verified .apk size in bytes." },
+        "status": { "type": "string", "enum": ["APPROVED"], "description": "Grant status." },
+        "grantedBy": { "type": "string", "description": "Admin UID who approved the order." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when granted." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when updated." }
+      },
+      "required": [
+        "userId", "orderId", "productId", "storagePath",
+        "fileName", "fileSizeBytes", "status", "grantedBy",
+        "createdAt", "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Authorized admin role registry."
+    },
+    "/payment_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/PaymentSettings" },
+      "description": "Storewide Easypaisa and JazzCash payment account details."
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/ApkProduct" },
+      "description": "APK product catalog metadata visible to signed-in users."
+    },
+    "/products/{productId}/grants/{userId}": {
+      "schema": { "$ref": "#/entities/DownloadGrant" },
+      "description": "Authorized buyer APK download entitlements enforced by Firestore and Storage rules."
+    },
+    "/product_assets/{productId}": {
+      "schema": { "$ref": "#/entities/ProductAsset" },
+      "description": "Admin-only protected storage path records for real APK files."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/ApkOrder" },
+      "description": "Customer APK purchase orders and gated delivery records."
+    }
+  }
+}

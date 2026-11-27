@@ -1,0 +1,6 @@
+{
+  "name": "Panel Injector FF",
+  "description": "APK file storefront and digital delivery platform with admin APK management, Easypaisa and JazzCash payment verification, and approved order downloads.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

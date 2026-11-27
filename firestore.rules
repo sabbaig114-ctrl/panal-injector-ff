@@ -1,0 +1,280 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() &&
+             request.auth.token.email_verified == true &&
+             request.auth.token.email == "bkainat419@gmail.com";
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() ||
+             (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isValidAdmin(data) {
+      return data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 150 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+             data.grantedBy is string && data.grantedBy.size() >= 1 && data.grantedBy.size() <= 128 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidPaymentSettings(data) {
+      return data.easypaisaTitle is string && data.easypaisaTitle.size() >= 2 && data.easypaisaTitle.size() <= 80 &&
+             data.easypaisaNumber is string && data.easypaisaNumber.size() >= 7 && data.easypaisaNumber.size() <= 25 &&
+             data.jazzcashTitle is string && data.jazzcashTitle.size() >= 2 && data.jazzcashTitle.size() <= 80 &&
+             data.jazzcashNumber is string && data.jazzcashNumber.size() >= 7 && data.jazzcashNumber.size() <= 25 &&
+             data.instructions is string && data.instructions.size() <= 500 &&
+             data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
+             data.version is string && data.version.size() >= 1 && data.version.size() <= 32 &&
+             data.category is string && data.category.size() >= 2 && data.category.size() <= 40 &&
+             data.description is string && data.description.size() >= 5 && data.description.size() <= 1000 &&
+             data.pricePkr is int && data.pricePkr > 0 && data.pricePkr <= 1000000 &&
+             data.fileName is string && data.fileName.size() >= 5 && data.fileName.size() <= 150 &&
+             data.fileSizeBytes is int && data.fileSizeBytes > 0 && data.fileSizeBytes <= 536870912 &&
+             data.active is bool &&
+             data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidProductAsset(data) {
+      return data.productId is string && isValidId(data.productId) &&
+             data.storagePath is string && data.storagePath.size() >= 5 && data.storagePath.size() <= 300 &&
+             data.fileName is string && data.fileName.size() >= 5 && data.fileName.size() <= 150 &&
+             data.fileSizeBytes is int && data.fileSizeBytes > 0 && data.fileSizeBytes <= 536870912 &&
+             data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidOrder(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() >= 3 && data.userEmail.size() <= 150 &&
+             data.productId is string && isValidId(data.productId) &&
+             data.productName is string && data.productName.size() >= 2 && data.productName.size() <= 80 &&
+             data.productVersion is string && data.productVersion.size() >= 1 && data.productVersion.size() <= 32 &&
+             data.pricePkr is int && data.pricePkr > 0 && data.pricePkr <= 1000000 &&
+             data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 80 &&
+             data.whatsappNumber is string && data.whatsappNumber.size() >= 7 && data.whatsappNumber.size() <= 25 &&
+             data.paymentMethod in ['EASYPAISA', 'JAZZCASH'] &&
+             data.transactionId is string && data.transactionId.size() >= 4 && data.transactionId.size() <= 64 &&
+             data.status in ['PENDING', 'APPROVED', 'REJECTED'] &&
+             (!('adminNote' in data) || (data.adminNote is string && data.adminNote.size() <= 300)) &&
+             (!('approvedStoragePath' in data) || (data.status == 'APPROVED' && data.approvedStoragePath is string && data.approvedStoragePath.size() >= 5 && data.approvedStoragePath.size() <= 300)) &&
+             (!('approvedFileName' in data) || (data.status == 'APPROVED' && data.approvedFileName is string && data.approvedFileName.size() >= 5 && data.approvedFileName.size() <= 150)) &&
+             (!('approvedFileSizeBytes' in data) || (data.status == 'APPROVED' && data.approvedFileSizeBytes is int && data.approvedFileSizeBytes > 0 && data.approvedFileSizeBytes <= 536870912)) &&
+             (!('reviewedBy' in data) || (data.reviewedBy is string && data.reviewedBy.size() >= 1 && data.reviewedBy.size() <= 128)) &&
+             (!('reviewedAt' in data) || isValidTimestamp(data.reviewedAt)) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidDownloadGrant(data) {
+      return data.userId is string && isValidId(data.userId) &&
+             data.orderId is string && isValidId(data.orderId) &&
+             data.productId is string && isValidId(data.productId) &&
+             data.storagePath is string && data.storagePath.size() >= 5 && data.storagePath.size() <= 300 &&
+             data.fileName is string && data.fileName.size() >= 5 && data.fileName.size() <= 150 &&
+             data.fileSizeBytes is int && data.fileSizeBytes > 0 && data.fileSizeBytes <= 536870912 &&
+             data.status == 'APPROVED' &&
+             data.grantedBy is string && data.grantedBy.size() >= 1 && data.grantedBy.size() <= 128 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) && (request.auth.uid == adminUid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isAdmin() &&
+                       isValidId(adminUid) &&
+                       isValidAdmin(incoming()) &&
+                       incoming().uid == adminUid &&
+                       incoming().grantedBy == request.auth.uid &&
+                       incoming().keys().hasAll(['uid', 'email', 'displayName', 'grantedBy', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['uid', 'email', 'displayName', 'grantedBy', 'createdAt', 'updatedAt']);
+      allow update: if isAdmin() &&
+                       isValidId(adminUid) &&
+                       isValidAdmin(incoming()) &&
+                       incoming().uid == existing().uid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['email', 'displayName', 'grantedBy', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(adminUid) && adminUid != request.auth.uid;
+    }
+
+    match /payment_settings/{settingId} {
+      allow get: if isSignedIn() && isValidId(settingId);
+      allow list: if isAdmin();
+      allow create: if isAdmin() &&
+                       isValidId(settingId) &&
+                       isValidPaymentSettings(incoming()) &&
+                       incoming().updatedBy == request.auth.uid &&
+                       incoming().keys().hasAll(['easypaisaTitle', 'easypaisaNumber', 'jazzcashTitle', 'jazzcashNumber', 'instructions', 'updatedBy', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['easypaisaTitle', 'easypaisaNumber', 'jazzcashTitle', 'jazzcashNumber', 'instructions', 'updatedBy', 'createdAt', 'updatedAt']);
+      allow update: if isAdmin() &&
+                       isValidId(settingId) &&
+                       isValidPaymentSettings(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedBy == request.auth.uid &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['easypaisaTitle', 'easypaisaNumber', 'jazzcashTitle', 'jazzcashNumber', 'instructions', 'updatedBy', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(settingId);
+    }
+
+    match /products/{productId} {
+      allow get: if isSignedIn() && isValidId(productId) && (existing().active == true || isAdmin());
+      allow list: if isSignedIn() && (resource.data.active == true || isAdmin());
+      allow create: if isAdmin() &&
+                       isValidId(productId) &&
+                       isValidProduct(incoming()) &&
+                       incoming().ownerUid == request.auth.uid &&
+                       incoming().keys().hasAll(['name', 'version', 'category', 'description', 'pricePkr', 'fileName', 'fileSizeBytes', 'active', 'ownerUid', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['name', 'version', 'category', 'description', 'pricePkr', 'fileName', 'fileSizeBytes', 'active', 'ownerUid', 'createdAt', 'updatedAt']);
+      allow update: if isAdmin() &&
+                       isValidId(productId) &&
+                       isValidProduct(incoming()) &&
+                       incoming().ownerUid == existing().ownerUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'version', 'category', 'description', 'pricePkr', 'fileName', 'fileSizeBytes', 'active', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(productId);
+
+      match /grants/{userId} {
+        allow get: if isSignedIn() && isValidId(productId) && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+        allow list: if isAdmin();
+        allow create: if isAdmin() &&
+                         isValidId(productId) &&
+                         isValidId(userId) &&
+                         isValidDownloadGrant(incoming()) &&
+                         incoming().userId == userId &&
+                         incoming().productId == productId &&
+                         incoming().grantedBy == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'orderId', 'productId', 'storagePath', 'fileName', 'fileSizeBytes', 'status', 'grantedBy', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'orderId', 'productId', 'storagePath', 'fileName', 'fileSizeBytes', 'status', 'grantedBy', 'createdAt', 'updatedAt']) &&
+                         getAfter(/databases/$(database)/documents/orders/$(incoming().orderId)).data.status == 'APPROVED' &&
+                         getAfter(/databases/$(database)/documents/orders/$(incoming().orderId)).data.userId == userId;
+        allow update: if isAdmin() &&
+                         isValidId(productId) &&
+                         isValidId(userId) &&
+                         isValidDownloadGrant(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().productId == existing().productId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().grantedBy == request.auth.uid &&
+                         getAfter(/databases/$(database)/documents/orders/$(incoming().orderId)).data.status == 'APPROVED' &&
+                         getAfter(/databases/$(database)/documents/orders/$(incoming().orderId)).data.userId == userId &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['orderId', 'storagePath', 'fileName', 'fileSizeBytes', 'status', 'grantedBy', 'updatedAt']);
+        allow delete: if isAdmin() && isValidId(productId) && isValidId(userId);
+      }
+    }
+
+    match /product_assets/{productId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin() &&
+                       isValidId(productId) &&
+                       isValidProductAsset(incoming()) &&
+                       incoming().productId == productId &&
+                       incoming().ownerUid == request.auth.uid &&
+                       incoming().keys().hasAll(['productId', 'storagePath', 'fileName', 'fileSizeBytes', 'ownerUid', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['productId', 'storagePath', 'fileName', 'fileSizeBytes', 'ownerUid', 'createdAt', 'updatedAt']);
+      allow update: if isAdmin() &&
+                       isValidId(productId) &&
+                       isValidProductAsset(incoming()) &&
+                       incoming().productId == existing().productId &&
+                       incoming().ownerUid == existing().ownerUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['storagePath', 'fileName', 'fileSizeBytes', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && isValidId(orderId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+                       isValidId(orderId) &&
+                       isValidOrder(incoming()) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'PENDING' &&
+                       !('approvedStoragePath' in incoming()) &&
+                       !('approvedFileName' in incoming()) &&
+                       !('approvedFileSizeBytes' in incoming()) &&
+                       !('reviewedBy' in incoming()) &&
+                       !('reviewedAt' in incoming()) &&
+                       !('adminNote' in incoming()) &&
+                       incoming().keys().hasAll([
+                         'userId', 'userEmail', 'productId', 'productName', 'productVersion',
+                         'pricePkr', 'customerName', 'whatsappNumber', 'paymentMethod',
+                         'transactionId', 'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'userEmail', 'productId', 'productName', 'productVersion',
+                         'pricePkr', 'customerName', 'whatsappNumber', 'paymentMethod',
+                         'transactionId', 'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       exists(/databases/$(database)/documents/products/$(incoming().productId));
+      allow update: if isAdmin() &&
+                       isValidId(orderId) &&
+                       isValidOrder(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().userEmail == existing().userEmail &&
+                       incoming().productId == existing().productId &&
+                       incoming().productName == existing().productName &&
+                       incoming().productVersion == existing().productVersion &&
+                       incoming().pricePkr == existing().pricePkr &&
+                       incoming().customerName == existing().customerName &&
+                       incoming().whatsappNumber == existing().whatsappNumber &&
+                       incoming().paymentMethod == existing().paymentMethod &&
+                       incoming().transactionId == existing().transactionId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         (incoming().status == 'APPROVED' &&
+                          'approvedStoragePath' in incoming() &&
+                          'approvedFileName' in incoming() &&
+                          'approvedFileSizeBytes' in incoming() &&
+                          'reviewedBy' in incoming() &&
+                          'reviewedAt' in incoming()) ||
+                         (incoming().status in ['PENDING', 'REJECTED'] &&
+                          !('approvedStoragePath' in incoming()) &&
+                          !('approvedFileName' in incoming()) &&
+                          !('approvedFileSizeBytes' in incoming()))
+                       ) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'status', 'adminNote', 'approvedStoragePath', 'approvedFileName',
+                         'approvedFileSizeBytes', 'reviewedBy', 'reviewedAt', 'updatedAt'
+                       ]);
+      allow delete: if isAdmin() && isValidId(orderId);
+    }
+  }
+}
